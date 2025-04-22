@@ -1,0 +1,121 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Assistant v8</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#ffffff"/>
+  <style>
+    body {
+      font-family: sans-serif;
+      text-align: center;
+      padding: 20px;
+    }
+    #currentTime {
+      font-size: 20px;
+      margin-bottom: 20px;
+      font-weight: bold;
+    }
+    input[type="text"], select {
+      padding: 12px;
+      width: 80%;
+      font-size: 18px;
+      margin: 10px 0;
+    }
+    button {
+      padding: 12px 20px;
+      margin: 10px;
+      font-size: 18px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    .task-btn {
+      background-color: #f0f0f0;
+    }
+    .task-btn.selected {
+      background-color: #4CAF50;
+      color: white;
+    }
+  </style>
+</head>
+<body>
+  <div id="currentTime">Loading current time...</div>
+  <h2>Assistant v8</h2>
+  <input type="text" id="taskInput" placeholder="Type your task here...">
+  <div>
+    <button class="task-btn" onclick="selectType(this)">To Do</button>
+    <button class="task-btn" onclick="selectType(this)">Call</button>
+    <button class="task-btn" onclick="selectType(this)">Appointment</button>
+  </div>
+  <div>
+    <label for="hourSelect">Hour:</label>
+    <select id="hourSelect">
+      <option>1</option><option>2</option><option>3</option><option>4</option><option>5</option>
+      <option>6</option><option>7</option><option>8</option><option>9</option><option>10</option>
+      <option>11</option><option>12</option>
+    </select>
+    <label for="minuteSelect">Minute:</label>
+    <select id="minuteSelect">
+      <option>00</option><option>15</option><option>30</option><option>45</option>
+    </select>
+    <select id="ampmSelect">
+      <option value="AM">AM</option>
+      <option value="PM">PM</option>
+    </select>
+  </div>
+  <button onclick="scheduleTask()">Set Reminder</button>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      function updateTime() {
+        const now = new Date();
+        const date = now.toLocaleDateString('en-US');
+        const time = now.toLocaleTimeString('en-US');
+        document.getElementById('currentTime').innerText = `Date: ${date} | Time: ${time}`;
+      }
+      updateTime();
+      setInterval(updateTime, 1000);
+    });
+
+    function selectType(btn) {
+      btn.classList.toggle('selected');
+    }
+
+    function scheduleTask() {
+      const task = document.getElementById('taskInput').value;
+      const hour = document.getElementById('hourSelect').value;
+      const minute = document.getElementById('minuteSelect').value;
+      const ampm = document.getElementById('ampmSelect').value;
+
+      const now = new Date();
+      let targetHour = parseInt(hour);
+      const targetMinute = parseInt(minute);
+      if (ampm === 'PM' && targetHour !== 12) targetHour += 12;
+      if (ampm === 'AM' && targetHour === 12) targetHour = 0;
+
+      const targetTime = new Date();
+      targetTime.setHours(targetHour, targetMinute, 0, 0);
+
+      if (targetTime < now) {
+        targetTime.setDate(targetTime.getDate() + 1);
+      }
+
+      const timeDiff = targetTime.getTime() - now.getTime();
+
+      alert(`Reminder set for ${hour}:${minute} ${ampm}`);
+
+      setTimeout(() => {
+        const utterance = new SpeechSynthesisUtterance(task);
+        speechSynthesis.speak(utterance);
+      }, timeDiff);
+    }
+
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('service-worker.js');
+    }
+  </script>
+</body>
+</html>
