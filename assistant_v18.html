@@ -1,0 +1,190 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Assistant v18</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      text-align: center;
+      padding: 20px;
+      font-size: 22px;
+    }
+    input, select, button {
+      padding: 16px;
+      font-size: 20px;
+      margin: 8px;
+    }
+    #currentTime {
+      font-size: 24px;
+      font-weight: bold;
+      margin-bottom: 20px;
+    }
+    #mainCountdown, #repeatCountdown {
+      font-size: 20px;
+      margin-top: 10px;
+      color: #444;
+    }
+    #reminderPopup {
+      display: none;
+      background-color: #fefefe;
+      padding: 30px;
+      border: 2px solid #888;
+      margin-top: 40px;
+      font-size: 22px;
+      border-radius: 10px;
+      cursor: pointer;
+      background: #e0f7fa;
+    }
+  </style>
+</head>
+<body onload="initApp();">
+  <div id="currentTime">Loading...</div>
+
+  <button onclick="playTestBeep()">Test Beep</button>
+  <button onclick="playTestVoice()">Test Voice with Task</button><br/>
+
+  <input type="text" id="taskInput" placeholder="What do you want to be reminded of?" style="width: 90%;" /><br/>
+
+  <div>
+    <label>Set Specific Time:</label><br/>
+    <select id="hourSelect"></select>
+    <select id="minuteSelect"></select>
+    <button onclick="toggleAmPm()" id="ampmBtn">AM</button>
+  </div>
+
+  <div>
+    <label>Repeat every:</label>
+    <select id="repeatInterval">
+      <option value="">(off)</option>
+      <option value="1">1 minute</option>
+      <option value="2" selected>2 minutes</option>
+      <option value="3">3 minutes</option>
+      <option value="5">5 minutes</option>
+    </select>
+  </div>
+
+  <button onclick="setReminder()">Set Reminder</button>
+
+  <div id="mainCountdown"></div>
+  <div id="repeatCountdown"></div>
+  <div id="reminderPopup" onclick="speakPopupReminder()">Tap here to hear your reminder</div>
+  <div style="margin-top:40px; font-size:16px;">Assistant Version 18</div>
+
+  <script>
+    let ampm = "AM";
+    let repeatTimer = null;
+    let countdownInterval = null;
+    let repeatCountdownInterval = null;
+    let cachedTask = "";
+
+    function initApp() {
+      const hourSelect = document.getElementById("hourSelect");
+      for (let h = 1; h <= 12; h++) {
+        const opt = document.createElement("option");
+        opt.value = h;
+        opt.text = h;
+        hourSelect.appendChild(opt);
+      }
+      const minuteSelect = document.getElementById("minuteSelect");
+      for (let m = 0; m < 60; m++) {
+        const opt = document.createElement("option");
+        opt.value = m;
+        opt.text = m.toString().padStart(2, '0');
+        minuteSelect.appendChild(opt);
+      }
+      updateTime();
+      setInterval(updateTime, 1000);
+    }
+
+    function updateTime() {
+      const now = new Date();
+      document.getElementById("currentTime").innerText = now.toLocaleDateString() + " | " + now.toLocaleTimeString();
+    }
+
+    function toggleAmPm() {
+      ampm = (ampm === "AM") ? "PM" : "AM";
+      document.getElementById("ampmBtn").innerText = ampm;
+    }
+
+    function playTestBeep() {
+      const beep = new Audio("https://actions.google.com/sounds/v1/alarms/beep_short.ogg");
+      beep.play();
+    }
+
+    function playTestVoice() {
+      const task = document.getElementById("taskInput").value || "This is a voice test.";
+      const testSpeech = new SpeechSynthesisUtterance(task);
+      speechSynthesis.speak(testSpeech);
+    }
+
+    function speakPopupReminder() {
+      const speak = new SpeechSynthesisUtterance(cachedTask || "This is your reminder.");
+      speechSynthesis.speak(speak);
+      alert("Reminder: " + cachedTask);
+      document.getElementById("reminderPopup").style.display = "none";
+    }
+
+    function showReminderPopup(taskText) {
+      cachedTask = taskText;
+      document.getElementById("reminderPopup").style.display = "block";
+    }
+
+    function setReminder() {
+      const task = document.getElementById("taskInput").value || "This is your reminder.";
+      const hour = parseInt(document.getElementById("hourSelect").value);
+      const minute = parseInt(document.getElementById("minuteSelect").value);
+      const repeat = parseInt(document.getElementById("repeatInterval").value);
+
+      let targetHour = hour;
+      if (ampm === "PM" && hour !== 12) targetHour += 12;
+      if (ampm === "AM" && hour === 12) targetHour = 0;
+
+      const now = new Date();
+      const target = new Date();
+      target.setHours(targetHour, minute, 0, 0);
+      if (target < now) target.setDate(target.getDate() + 1);
+
+      const msUntilReminder = target.getTime() - now.getTime();
+      alert("Main reminder set!");
+
+      if (countdownInterval) clearInterval(countdownInterval);
+      countdownInterval = setInterval(() => {
+        const now = new Date();
+        const diff = target - now;
+        if (diff <= 0) {
+          clearInterval(countdownInterval);
+          document.getElementById("mainCountdown").innerText = "Main reminder ready!";
+          showReminderPopup(task);
+        } else {
+          const mins = Math.floor(diff / 60000);
+          const secs = Math.floor((diff % 60000) / 1000);
+          document.getElementById("mainCountdown").innerText = `Main reminder in: ${mins}m ${secs}s`;
+        }
+      }, 1000);
+
+      if (repeatTimer) clearInterval(repeatTimer);
+      if (repeatCountdownInterval) clearInterval(repeatCountdownInterval);
+
+      if (!isNaN(repeat)) {
+        let countdown = repeat * 60;
+        repeatTimer = setInterval(() => {
+          showReminderPopup("[Repeating] " + task);
+          countdown = repeat * 60;
+        }, repeat * 60000);
+
+        repeatCountdownInterval = setInterval(() => {
+          countdown--;
+          const mins = Math.floor(countdown / 60);
+          const secs = countdown % 60;
+          document.getElementById("repeatCountdown").innerText = `Repeating in: ${mins}m ${secs}s`;
+        }, 1000);
+      } else {
+        document.getElementById("repeatCountdown").innerText = "";
+      }
+    }
+  </script>
+</body>
+</html>
