@@ -1,0 +1,55 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Assistant v11</title>
+  <style>
+    body { font-family: sans-serif; text-align: center; padding: 20px; }
+    #currentTime { font-size: 20px; margin-bottom: 20px; font-weight: bold; }
+    input, select, button { margin: 10px; padding: 10px; font-size: 16px; }
+  </style>
+</head>
+<body onload="updateTime(); setInterval(updateTime, 1000);">
+  <div id="currentTime">Loading time...</div>
+  <h2>Assistant v11</h2>
+  <input type="text" id="taskInput" placeholder="Type your task here..." />
+  <br/>
+  <label>Remind me in:</label>
+  <select id="delayValue">
+    <option value="1">1 minute</option>
+    <option value="2" selected>2 minutes</option>
+    <option value="3">3 minutes</option>
+    <option value="5">5 minutes</option>
+    <option value="10">10 minutes</option>
+  </select>
+  <button onclick="setReminder()">Set Reminder</button>
+
+  <script>
+    function updateTime() {
+      const now = new Date();
+      const date = now.toLocaleDateString('en-US');
+      const time = now.toLocaleTimeString('en-US');
+      document.getElementById('currentTime').innerText = `Date: ${date} | Time: ${time}`;
+    }
+
+    function setReminder() {
+      const task = document.getElementById('taskInput').value;
+      const delayMinutes = parseInt(document.getElementById('delayValue').value);
+      const delayMs = delayMinutes * 60 * 1000;
+
+      alert(`Reminder set for ${delayMinutes} minute(s) from now.`);
+
+      setTimeout(() => {
+        const audio = new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg');
+        audio.play().then(() => {
+          const utterance = new SpeechSynthesisUtterance(task || "This is your reminder.");
+          speechSynthesis.speak(utterance);
+          alert(`Reminder: ${task || "No task specified."}`);
+        });
+      }, delayMs);
+    }
+  </script>
+</body>
+</html>
