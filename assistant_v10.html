@@ -1,0 +1,156 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Assistant v10</title>
+  <meta name="theme-color" content="#ffffff" />
+  <style>
+    body {
+      font-family: sans-serif;
+      text-align: center;
+      padding: 20px;
+    }
+    #currentTime {
+      font-size: 20px;
+      margin-bottom: 20px;
+      font-weight: bold;
+    }
+    input[type="text"], select {
+      padding: 12px;
+      width: 80%;
+      font-size: 18px;
+      margin: 10px 0;
+    }
+    button {
+      padding: 12px 20px;
+      margin: 10px;
+      font-size: 18px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    .task-btn {
+      background-color: #f0f0f0;
+    }
+    .task-btn.selected {
+      background-color: #4CAF50;
+      color: white;
+    }
+    #countdown {
+      font-size: 18px;
+      margin-top: 20px;
+      color: #333;
+    }
+  </style>
+</head>
+<body>
+  <div id="currentTime">Loading current time...</div>
+  <h2>Assistant v10</h2>
+
+  <input type="text" id="taskInput" placeholder="Type your task here..." />
+  <div>
+    <button class="task-btn" onclick="selectType(this)">To Do</button>
+    <button class="task-btn" onclick="selectType(this)">Call</button>
+    <button class="task-btn" onclick="selectType(this)">Appointment</button>
+  </div>
+
+  <div>
+    <label for="hourSelect">Hour:</label>
+    <select id="hourSelect"></select>
+    <label for="minuteSelect">Minute:</label>
+    <select id="minuteSelect"></select>
+    <select id="ampmSelect">
+      <option value="AM">AM</option>
+      <option value="PM">PM</option>
+    </select>
+  </div>
+
+  <button onclick="scheduleTask()">Set Reminder</button>
+  <button onclick="testVoice()">Test Voice</button>
+
+  <div id="countdown"></div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      for (let i = 1; i <= 12; i++) {
+        let opt = document.createElement("option");
+        opt.value = i;
+        opt.text = i;
+        document.getElementById("hourSelect").appendChild(opt);
+      }
+      for (let i = 0; i < 60; i++) {
+        let opt = document.createElement("option");
+        opt.value = i.toString().padStart(2, '0');
+        opt.text = i.toString().padStart(2, '0');
+        document.getElementById("minuteSelect").appendChild(opt);
+      }
+
+      function updateTime() {
+        const now = new Date();
+        const date = now.toLocaleDateString('en-US');
+        const time = now.toLocaleTimeString('en-US');
+        document.getElementById('currentTime').innerText = `Date: ${date} | Time: ${time}`;
+      }
+      updateTime();
+      setInterval(updateTime, 1000);
+    });
+
+    function selectType(btn) {
+      btn.classList.toggle('selected');
+    }
+
+    function testVoice() {
+      const msg = new SpeechSynthesisUtterance("This is a voice test.");
+      speechSynthesis.speak(msg);
+    }
+
+    function scheduleTask() {
+      const task = document.getElementById("taskInput").value;
+      const hour = parseInt(document.getElementById("hourSelect").value);
+      const minute = parseInt(document.getElementById("minuteSelect").value);
+      const ampm = document.getElementById("ampmSelect").value;
+
+      if (!task) {
+        alert("Please enter a task.");
+        return;
+      }
+
+      const now = new Date();
+      let targetHour = hour;
+      if (ampm === "PM" && hour !== 12) targetHour += 12;
+      if (ampm === "AM" && hour === 12) targetHour = 0;
+
+      const targetTime = new Date();
+      targetTime.setHours(targetHour, minute, 0, 0);
+
+      if (targetTime < now) {
+        targetTime.setDate(targetTime.getDate() + 1);
+      }
+
+      const timeDiff = targetTime - now;
+
+      alert(`Reminder set for ${hour}:${minute.toString().padStart(2, '0')} ${ampm}`);
+      const countdownEl = document.getElementById("countdown");
+
+      const interval = setInterval(() => {
+        const now = new Date();
+        const remaining = targetTime - now;
+
+        if (remaining <= 0) {
+          clearInterval(interval);
+          countdownEl.innerText = "Reminder time!";
+          const utterance = new SpeechSynthesisUtterance(task);
+          speechSynthesis.speak(utterance);
+          alert("Reminder: " + task);
+        } else {
+          const minutes = Math.floor(remaining / 60000);
+          const seconds = Math.floor((remaining % 60000) / 1000);
+          countdownEl.innerText = `Time until reminder: ${minutes}m ${seconds}s`;
+        }
+      }, 1000);
+    }
+  </script>
+</body>
+</html>
