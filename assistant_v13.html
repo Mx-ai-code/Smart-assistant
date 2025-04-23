@@ -1,0 +1,114 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Assistant v13</title>
+  <style>
+    body { font-family: sans-serif; text-align: center; padding: 20px; }
+    #currentTime { font-size: 20px; margin-bottom: 20px; font-weight: bold; }
+    input, select, button { margin: 10px; padding: 10px; font-size: 16px; }
+    #countdown { font-size: 16px; margin-top: 20px; color: #555; }
+  </style>
+</head>
+<body onload="initApp();">
+  <div id="currentTime">Loading time...</div>
+  <h2>Assistant v13</h2>
+
+  <input type="text" id="taskInput" placeholder="Type your task here..." /><br/>
+
+  <label>Set Time:</label>
+  <select id="hourSelect"></select> :
+  <select id="minuteSelect"></select>
+  <select id="ampmSelect">
+    <option value="AM">AM</option>
+    <option value="PM">PM</option>
+  </select><br/>
+
+  <label>OR Remind me in:</label>
+  <select id="delayValue">
+    <option value="">--None--</option>
+    <option value="1">1 minute</option>
+    <option value="2">2 minutes</option>
+    <option value="3">3 minutes</option>
+    <option value="5">5 minutes</option>
+    <option value="10">10 minutes</option>
+  </select><br/>
+
+  <button onclick="setReminder()">Set Reminder</button>
+  <div id="countdown"></div>
+
+  <script>
+    function initApp() {
+      for (let h = 1; h <= 12; h++) {
+        let opt = document.createElement("option");
+        opt.value = h;
+        opt.text = h;
+        document.getElementById("hourSelect").appendChild(opt);
+      }
+      for (let m = 0; m < 60; m++) {
+        let opt = document.createElement("option");
+        opt.value = m.toString().padStart(2, '0');
+        opt.text = m.toString().padStart(2, '0');
+        document.getElementById("minuteSelect").appendChild(opt);
+      }
+      updateTime();
+      setInterval(updateTime, 1000);
+    }
+
+    function updateTime() {
+      const now = new Date();
+      const date = now.toLocaleDateString('en-US');
+      const time = now.toLocaleTimeString('en-US');
+      document.getElementById('currentTime').innerText = `Date: ${date} | Time: ${time}`;
+    }
+
+    function setReminder() {
+      const task = document.getElementById('taskInput').value || "You have a reminder.";
+      const delayValue = document.getElementById('delayValue').value;
+      let reminderTime = null;
+
+      if (delayValue) {
+        reminderTime = new Date(new Date().getTime() + parseInt(delayValue) * 60000);
+      } else {
+        const hour = parseInt(document.getElementById('hourSelect').value);
+        const minute = parseInt(document.getElementById('minuteSelect').value);
+        const ampm = document.getElementById('ampmSelect').value;
+        const now = new Date();
+        let targetHour = hour;
+        if (ampm === "PM" && hour !== 12) targetHour += 12;
+        if (ampm === "AM" && hour === 12) targetHour = 0;
+
+        reminderTime = new Date();
+        reminderTime.setHours(targetHour, minute, 0, 0);
+        if (reminderTime < now) {
+          reminderTime.setDate(reminderTime.getDate() + 1);
+        }
+      }
+
+      const countdownEl = document.getElementById("countdown");
+      alert("Reminder set!");
+
+      const interval = setInterval(() => {
+        const now = new Date();
+        const diff = reminderTime - now;
+        if (diff <= 0) {
+          clearInterval(interval);
+          countdownEl.innerText = "Reminder time!";
+          const audio = new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg');
+          audio.play().then(() => {
+            const utterance = new SpeechSynthesisUtterance(task);
+            speechSynthesis.speak(utterance);
+            alert("Reminder: " + task);
+          });
+        } else {
+          const mins = Math.floor(diff / 60000);
+          const secs = Math.floor((diff % 60000) / 1000);
+          countdownEl.innerText = `Time until reminder: ${mins}m ${secs}s`;
+        }
+      }, 1000);
+    }
+  </script>
+</body>
+</html>
