@@ -1,0 +1,111 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Assistant v14</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      text-align: center;
+      padding: 20px;
+      font-size: 22px;
+    }
+    input[type="text"], select, button {
+      padding: 16px;
+      font-size: 20px;
+      margin: 10px 0;
+      width: 90%;
+    }
+    #currentTime {
+      font-size: 24px;
+      font-weight: bold;
+      margin-bottom: 20px;
+    }
+  </style>
+</head>
+<body onload="updateTime(); setInterval(updateTime, 1000);">
+  <div id="currentTime">Loading time...</div>
+  <h2>Assistant v14</h2>
+
+  <input type="text" id="taskInput" placeholder="Enter your task..." />
+
+  <div>
+    <label for="hourSelect">Hour:</label>
+    <select id="hourSelect">
+      ${[...Array(12).keys()].map(i => `<option>${i + 1}</option>`).join('')}
+    </select>
+
+    <label for="minuteSelect">Minute:</label>
+    <select id="minuteSelect">
+      ${[...Array(60).keys()].map(i => `<option>${i.toString().padStart(2, '0')}</option>`).join('')}
+    </select>
+
+    <select id="ampmSelect">
+      <option value="AM">AM</option>
+      <option value="PM">PM</option>
+    </select>
+  </div>
+
+  <div>
+    <label for="delaySelect"><strong>Also remind me in (extra delay):</strong></label>
+    <select id="delaySelect">
+      <option value="">(optional)</option>
+      <option value="1">1 minute</option>
+      <option value="2">2 minutes</option>
+      <option value="3">3 minutes</option>
+      <option value="5">5 minutes</option>
+    </select>
+  </div>
+
+  <button onclick="scheduleTask()">Set Reminder</button>
+
+  <script>
+    function updateTime() {
+      const now = new Date();
+      document.getElementById("currentTime").innerText =
+        'Date: ' + now.toLocaleDateString('en-US') + ' | Time: ' + now.toLocaleTimeString('en-US');
+    }
+
+    function speakTask(task) {
+      const utterance = new SpeechSynthesisUtterance(task);
+      speechSynthesis.speak(utterance);
+    }
+
+    function scheduleTask() {
+      const task = document.getElementById("taskInput").value;
+      const hour = parseInt(document.getElementById("hourSelect").value);
+      const minute = parseInt(document.getElementById("minuteSelect").value);
+      const ampm = document.getElementById("ampmSelect").value;
+      const delay = parseInt(document.getElementById("delaySelect").value);
+
+      let scheduledHour = hour;
+      if (ampm === 'PM' && hour !== 12) scheduledHour += 12;
+      if (ampm === 'AM' && hour === 12) scheduledHour = 0;
+
+      const now = new Date();
+      const target = new Date();
+      target.setHours(scheduledHour, minute, 0, 0);
+      if (target < now) target.setDate(target.getDate() + 1);
+
+      const msUntilReminder = target.getTime() - now.getTime();
+
+      if (task) {
+        setTimeout(() => {
+          speakTask(task);
+        }, msUntilReminder);
+
+        if (!isNaN(delay)) {
+          setTimeout(() => {
+            speakTask("[Extra Reminder] " + task);
+          }, delay * 60 * 1000);
+        }
+        alert("Reminder set for main time and optional extra.");
+      } else {
+        alert("Enter a task to be reminded.");
+      }
+    }
+  </script>
+</body>
+</html>
